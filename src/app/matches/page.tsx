@@ -69,8 +69,8 @@ function groupByMonthAndDay(matches: Match[]): MonthGroup[] {
   return months;
 }
 
-export default function MatchesPage() {
-  const matches = listMatches();
+export default async function MatchesPage() {
+  const matches = await listMatches();
   const months = groupByMonthAndDay(matches);
 
   return (

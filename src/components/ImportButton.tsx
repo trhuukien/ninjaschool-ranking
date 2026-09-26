@@ -15,7 +15,12 @@ export function ImportButton() {
     startTransition(async () => {
       try {
         const res = await fetch("/api/import", { method: "POST" });
-        const data = await res.json();
+        const data = (await res.json()) as {
+          inserted?: number;
+          updated?: number;
+          skipped?: number;
+          error?: string;
+        };
         if (!res.ok) throw new Error(data.error ?? "Import thất bại");
         setMessage(
           `Đã đồng bộ: ${data.inserted} thêm mới, ${data.updated} cập nhật, ${data.skipped} bỏ qua.`,

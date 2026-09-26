@@ -44,18 +44,18 @@ const LAST_ELO_CHANGE_SUBQUERY = `
     LIMIT 1) AS last_elo_change
 `;
 
-export function listMembers(): Member[] {
-  const db = getDb();
-  return db
+export async function listMembers(): Promise<Member[]> {
+  const db = await getDb();
+  const { results } = await db
     .prepare(`SELECT members.*, ${LAST_ELO_CHANGE_SUBQUERY} FROM members ORDER BY elo DESC, character_name ASC`)
-    .all() as unknown as Member[];
+    .all<Member>();
+  return results;
 }
 
-export function getMember(id: number): Member | undefined {
-  const db = getDb();
-  return db.prepare("SELECT * FROM members WHERE id = ?").get(id) as
-    | Member
-    | undefined;
+export async function getMember(id: number): Promise<Member | undefined> {
+  const db = await getDb();
+  const row = await db.prepare("SELECT * FROM members WHERE id = ?").bind(id).first<Member>();
+  return row ?? undefined;
 }
 
 export interface MemberMatchHistoryRow {
@@ -68,9 +68,9 @@ export interface MemberMatchHistoryRow {
   elo_change: number;
 }
 
-export function getMemberMatchHistory(memberId: number): MemberMatchHistoryRow[] {
-  const db = getDb();
-  return db
+export async function getMemberMatchHistory(memberId: number): Promise<MemberMatchHistoryRow[]> {
+  const db = await getDb();
+  const { results } = await db
     .prepare(
       `SELECT m.id as match_id, m.played_at, mp.team, m.result,
               mp.elo_before, mp.elo_after, mp.elo_change
@@ -79,7 +79,9 @@ export function getMemberMatchHistory(memberId: number): MemberMatchHistoryRow[]
        WHERE mp.member_id = ?
        ORDER BY m.played_at DESC, m.id DESC`,
     )
-    .all(memberId) as unknown as MemberMatchHistoryRow[];
+    .bind(memberId)
+    .all<MemberMatchHistoryRow>();
+  return results;
 }
 
 function toIntOrNull(raw: string | undefined): number | null {
@@ -93,14 +95,12 @@ export async function importMembersFromSheet(): Promise<{
   skipped: number;
 }> {
   const rows = await fetchSheetValues(SPREADSHEET_ID, SHEET_RANGE);
-  const db = getDb();
+  const db = await getDb();
 
-  const findExisting = db.prepare(
-    "SELECT id FROM members WHERE character_name = ?",
-  );
+  const findExisting = db.prepare("SELECT id FROM members WHERE character_name = ?");
   const upsert = db.prepare(`
     INSERT INTO members (character_name, owner, class, level, pt, icon, avatar_id, skill_ids, item_ids)
-    VALUES (@character_name, @owner, @class, @level, @pt, @icon, @avatar_id, @skill_ids, @item_ids)
+    VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
     ON CONFLICT(character_name) DO UPDATE SET
       owner = excluded.owner,
       class = excluded.class,
@@ -124,18 +124,20 @@ export async function importMembersFromSheet(): Promise<{
       continue;
     }
 
-    const existing = findExisting.get(characterName);
-    upsert.run({
-      character_name: characterName.trim(),
-      owner: owner?.trim() ?? "",
-      class: klass?.trim() ?? "",
-      level: level?.trim() ?? "",
-      pt: pt?.trim() ?? "",
-      icon: toIntOrNull(icon),
-      avatar_id: toIntOrNull(avatarId),
-      skill_ids: skillIds?.trim() || null,
-      item_ids: itemIds?.trim() || null,
-    });
+    const existing = await findExisting.bind(characterName).first();
+    await upsert
+      .bind(
+        characterName.trim(),
+        owner?.trim() ?? "",
+        klass?.trim() ?? "",
+        level?.trim() ?? "",
+        pt?.trim() ?? "",
+        toIntOrNull(icon),
+        toIntOrNull(avatarId),
+        skillIds?.trim() || null,
+        itemIds?.trim() || null,
+      )
+      .run();
 
     if (existing) updated++;
     else inserted++;

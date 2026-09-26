@@ -3,7 +3,7 @@ import { createMatch, listMatches } from "@/lib/matches";
 import type { TeamResult } from "@/lib/elo";
 
 export async function GET() {
-  return NextResponse.json(listMatches());
+  return NextResponse.json(await listMatches());
 }
 
 interface CreateMatchBody {
@@ -16,7 +16,7 @@ interface CreateMatchBody {
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as CreateMatchBody;
-    const outcome = createMatch({
+    const outcome = await createMatch({
       teamAIds: body.teamAIds,
       teamBIds: body.teamBIds,
       result: body.result,

@@ -12,8 +12,8 @@ const RANK_STYLE: Record<number, string> = {
   3: "text-amber-600",
 };
 
-export default function Home() {
-  const members = listMembers();
+export default async function Home() {
+  const members = await listMembers();
 
   return (
     <div className="flex flex-col gap-6">

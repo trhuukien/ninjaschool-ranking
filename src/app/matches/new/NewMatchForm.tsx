@@ -86,8 +86,13 @@ export function NewMatchForm({ members }: { members: MemberOption[] }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ teamAIds, teamBIds, result: winner as TeamResult, note: note || undefined }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Tạo trận đấu thất bại");
+      const data = (await res.json()) as
+        | { error: string }
+        | {
+            teamA: { characterName: string; class: string | null; eloBefore: number; eloAfter: number; eloChange: number }[];
+            teamB: { characterName: string; class: string | null; eloBefore: number; eloAfter: number; eloChange: number }[];
+          };
+      if ("error" in data) throw new Error(data.error);
       setSubmitted(data);
       setAssignments({});
       setNote("");

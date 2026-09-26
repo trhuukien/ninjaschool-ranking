@@ -14,10 +14,10 @@ export default async function MemberDetailPage({
 }) {
   const { id } = await params;
   const memberId = Number(id);
-  const member = getMember(memberId);
+  const member = await getMember(memberId);
   if (!member) notFound();
 
-  const history = getMemberMatchHistory(memberId);
+  const history = await getMemberMatchHistory(memberId);
   const skillIds = parseIdList(member.skill_ids);
   const itemIds = parseIdList(member.item_ids);
 
@@ -153,7 +153,7 @@ function matchOutcome(team: "A" | "B", result: "A" | "B" | "DRAW"): Outcome {
 function HistoryCard({
   row,
 }: {
-  row: ReturnType<typeof getMemberMatchHistory>[number];
+  row: Awaited<ReturnType<typeof getMemberMatchHistory>>[number];
 }) {
   const outcome = matchOutcome(row.team, row.result);
   return (
