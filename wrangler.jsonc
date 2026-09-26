@@ -21,12 +21,15 @@
       "database_name": "ninjaschool-ranking-db",
       "database_id": "2931ce10-b2dd-4ef9-939c-345793e09aa2"
     }
-  ],
-  // Real value is never stored here — set with `wrangler secret put
-  // GOOGLE_SERVICE_ACCOUNT_JSON` for production, or in .dev.vars (gitignored)
-  // for local dev. This empty placeholder only exists so `wrangler types`
-  // knows the binding's shape.
-  "vars": {
-    "GOOGLE_SERVICE_ACCOUNT_JSON": ""
-  }
+  ]
+  // GOOGLE_SERVICE_ACCOUNT_JSON is deliberately NOT declared here as a "var".
+  // wrangler.jsonc is git-controlled, and on a Git-connected Worker every
+  // deploy re-syncs "vars" from this file — so a placeholder value here would
+  // silently overwrite the real secret set in the dashboard on every push.
+  // Set it via the dashboard (Settings > Variables and Secrets > type
+  // "Secret", a plain string value — not "JSON" type, since the app does its
+  // own JSON.parse) or `wrangler secret put GOOGLE_SERVICE_ACCOUNT_JSON`; for
+  // local dev it comes from .dev.vars (gitignored). Its TS type lives in
+  // src/types/cloudflare-env.d.ts instead of the generated file, since it
+  // isn't a wrangler.jsonc binding.
 }
