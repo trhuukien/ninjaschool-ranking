@@ -51,4 +51,7 @@ next-env.d.ts
 /.open-next
 /.wrangler
 .dev.vars
-cloudflare-env.d.ts
+# cloudflare-env.d.ts is committed on purpose — Cloudflare's CI build needs
+# the D1Database/CloudflareEnv types it declares, and doesn't run
+# `wrangler types` itself. Regenerate with `npm run cf-typegen` after any
+# wrangler.jsonc binding change and commit the result.
