@@ -58,6 +58,15 @@ export async function getMember(id: number): Promise<Member | undefined> {
   return row ?? undefined;
 }
 
+export async function getMemberByName(characterName: string): Promise<Member | undefined> {
+  const db = await getDb();
+  const row = await db
+    .prepare("SELECT * FROM members WHERE character_name = ?")
+    .bind(characterName)
+    .first<Member>();
+  return row ?? undefined;
+}
+
 export interface MemberMatchHistoryRow {
   match_id: number;
   played_at: string;

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getMember, getMemberMatchHistory, parseIdList } from "@/lib/members";
+import { getMemberByName, getMemberMatchHistory, parseIdList } from "@/lib/members";
 import { cardClass } from "@/lib/ui";
 import { ClassBadge } from "@/components/ClassIcon";
 import { GameIcon, ResultIcon, RoleBadge, type Outcome } from "@/components/GameAssets";
@@ -10,14 +10,13 @@ export const dynamic = "force-dynamic";
 export default async function MemberDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ name: string }>;
 }) {
-  const { id } = await params;
-  const memberId = Number(id);
-  const member = await getMember(memberId);
+  const { name } = await params;
+  const member = await getMemberByName(decodeURIComponent(name));
   if (!member) notFound();
 
-  const history = await getMemberMatchHistory(memberId);
+  const history = await getMemberMatchHistory(member.id);
   const skillIds = parseIdList(member.skill_ids);
   const itemIds = parseIdList(member.item_ids);
 
@@ -28,7 +27,7 @@ export default async function MemberDetailPage({
           <GameIcon
             id={member.avatar_id}
             alt={member.character_name}
-            className="h-20 w-20 shrink-0 rounded-md border border-border sm:h-24 sm:w-24"
+            className="hidden h-20 w-20 shrink-0 rounded-md border border-border sm:block sm:h-24 sm:w-24"
           />
         )}
         <div className="min-w-0">

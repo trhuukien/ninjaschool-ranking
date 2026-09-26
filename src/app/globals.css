@@ -41,6 +41,8 @@ body {
   background:
     radial-gradient(ellipse 80% 50% at 50% -10%, rgba(220, 38, 38, 0.12), transparent),
     var(--background);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   color: var(--foreground);
 }
 

@@ -43,10 +43,12 @@ export default async function Home() {
             ))}
           </div>
 
-          {/* Desktop: table */}
-          <div className="hidden overflow-x-auto rounded-lg border border-border bg-surface sm:block">
+          {/* Desktop: table — capped height + internal scroll so a big roster
+              doesn't force the whole page to scroll past the header/controls */}
+          <div className="hidden overflow-hidden rounded-lg border border-border bg-surface sm:block">
+            <div className="max-h-[70vh] overflow-y-auto overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-surface-raised text-left text-muted">
+              <thead className="sticky top-0 z-10 bg-surface-raised text-left text-muted">
                 <tr>
                   <th className="px-4 py-3 font-medium">#</th>
                   <th className="px-4 py-3 font-medium">Nhân vật</th>
@@ -65,7 +67,7 @@ export default async function Home() {
                     </td>
                     <td className="px-4 py-4 font-medium">
                       <Link
-                        href={`/members/${m.id}`}
+                        href={`/members/${encodeURIComponent(m.character_name)}`}
                         className="flex items-center gap-2 hover:text-accent-strong hover:underline"
                       >
                         {m.avatar_id ? (
@@ -95,6 +97,7 @@ export default async function Home() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </>
       )}
@@ -119,17 +122,12 @@ function EloTrend({ change }: { change: number | null }) {
 function MemberCard({ member, rank }: { member: Member; rank: number }) {
   return (
     <Link
-      href={`/members/${member.id}`}
+      href={`/members/${encodeURIComponent(member.character_name)}`}
       className="flex items-center gap-3 rounded-lg border border-border p-4 active:bg-surface-raised"
     >
       <span className={"w-7 shrink-0 text-center font-display text-xl font-bold " + (RANK_STYLE[rank] ?? "text-muted")}>
         {rank}
       </span>
-      {member.avatar_id ? (
-        <GameIcon id={member.avatar_id} alt="" className="mr-1 h-11 w-11 shrink-0" />
-      ) : (
-        <span className="mr-1 h-11 w-11 shrink-0 bg-surface-raised" />
-      )}
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-1.5 truncate text-base font-medium">
           <RoleBadge iconId={member.icon} />

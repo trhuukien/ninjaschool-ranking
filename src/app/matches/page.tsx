@@ -2,7 +2,7 @@ import Link from "next/link";
 import { listMatches } from "@/lib/matches";
 import { cardClass } from "@/lib/ui";
 import { getClassInfo } from "@/components/ClassIcon";
-import { PhaseIcon, ResultIcon } from "@/components/GameAssets";
+import { PhaseIcon } from "@/components/GameAssets";
 
 export const dynamic = "force-dynamic";
 
@@ -123,8 +123,6 @@ function teamAvg(players: Player[]): number | null {
 }
 
 function MatchCard({ match: m }: { match: Match }) {
-  const wonA = m.result === "A";
-  const wonB = m.result === "B";
   const rows = Math.max(m.teamA.length, m.teamB.length);
   const d = new Date(m.played_at + "Z");
   const time = `${pad(d.getHours())}h${pad(d.getMinutes())}`;
@@ -132,18 +130,18 @@ function MatchCard({ match: m }: { match: Match }) {
   return (
     <div className={cardClass + " overflow-hidden text-sm"}>
       <div className="flex items-center justify-center gap-3 border-b border-border bg-surface-raised/40 px-3 py-1.5 sm:gap-6">
-        <SideSummary phase="A" count={m.teamA.length} avg={teamAvg(m.teamA)} won={wonA} />
+        <SideSummary phase="A" count={m.teamA.length} avg={teamAvg(m.teamA)} />
         <span className="w-10 shrink-0 text-center font-mono text-[11px] text-muted">{time}</span>
-        <SideSummary phase="B" count={m.teamB.length} avg={teamAvg(m.teamB)} won={wonB} reverse />
+        <SideSummary phase="B" count={m.teamB.length} avg={teamAvg(m.teamB)} reverse />
       </div>
 
       <div className="grid grid-cols-2 divide-x divide-border">
-        <div className={wonA ? "bg-green-500/[0.04]" : ""}>
+        <div>
           {Array.from({ length: rows }).map((_, i) => (
             <PlayerRow key={i} player={m.teamA[i]} />
           ))}
         </div>
-        <div className={wonB ? "bg-green-500/[0.04]" : ""}>
+        <div>
           {Array.from({ length: rows }).map((_, i) => (
             <PlayerRow key={i} player={m.teamB[i]} />
           ))}
@@ -160,24 +158,19 @@ function SideSummary({
   phase,
   count,
   avg,
-  won,
   reverse = false,
 }: {
   phase: "A" | "B";
   count: number;
   avg: number | null;
-  won: boolean;
   reverse?: boolean;
 }) {
   return (
-    <div className={"flex flex-col gap-0.5 " + (reverse ? "items-end" : "items-start")}>
-      <div className="flex h-4 items-center">{won && <ResultIcon outcome="win" className="h-4" />}</div>
-      <div className={"flex items-center gap-1.5" + (reverse ? " flex-row-reverse" : "")}>
-        <PhaseIcon phase={phase} className="h-5" />
-        <span className={"text-[11px] text-muted" + (reverse ? " text-right" : "")}>
-          {count} người{avg !== null ? ` · ${avg}` : ""}
-        </span>
-      </div>
+    <div className={"flex items-center gap-1.5" + (reverse ? " flex-row-reverse" : "")}>
+      <PhaseIcon phase={phase} className="h-5" />
+      <span className={"text-[11px] text-muted" + (reverse ? " text-right" : "")}>
+        {count} nhẫn giả{avg !== null ? ` · ${avg}` : ""}
+      </span>
     </div>
   );
 }
@@ -192,7 +185,7 @@ function PlayerRow({ player }: { player?: Player }) {
         <img src={`/icons/game/${info.icon}.png`} alt="" className="h-4 w-4 shrink-0 object-contain" />
       )}
       <Link
-        href={`/members/${player.id}`}
+        href={`/members/${encodeURIComponent(player.character_name)}`}
         className={"min-w-0 flex-1 truncate font-medium hover:underline " + (info ? info.text : "")}
       >
         {player.character_name}

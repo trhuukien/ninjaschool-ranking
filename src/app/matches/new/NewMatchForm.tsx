@@ -132,7 +132,7 @@ export function NewMatchForm({ members }: { members: MemberOption[] }) {
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_400px] md:items-start">
       {/* Chọn phe thắng + ghi chú — hiện trước trên mobile để khỏi cuộn qua cả roster mới bấm lưu được */}
-      <div className="order-1 flex flex-col gap-4 md:sticky md:top-20 md:order-2">
+      <div className="order-1 sticky top-16 z-10 flex flex-col gap-4 bg-background pb-2 md:top-20 md:order-2 md:bg-transparent md:pb-0">
         <div className="grid grid-cols-2 gap-2">
           <PhaseColumn
             phase="A"
