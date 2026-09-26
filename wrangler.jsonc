@@ -19,7 +19,7 @@
     {
       "binding": "DB",
       "database_name": "ninjaschool-ranking-db",
-      "database_id": "REPLACE_ME_AFTER_WRANGLER_D1_CREATE"
+      "database_id": "2931ce10-b2dd-4ef9-939c-345793e09aa2"
     }
   ],
   // Real value is never stored here — set with `wrangler secret put
