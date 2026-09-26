@@ -129,9 +129,9 @@ function MatchCard({ match: m }: { match: Match }) {
 
   return (
     <div className={cardClass + " overflow-hidden text-sm"}>
-      <div className="flex items-center justify-center gap-3 border-b border-border bg-surface-raised/40 px-3 py-1.5 sm:gap-6">
+      <div className="flex items-center justify-between gap-3 border-b border-border bg-surface-raised/40 px-3 py-1.5 sm:gap-6">
         <SideSummary phase="A" count={m.teamA.length} avg={teamAvg(m.teamA)} />
-        <span className="w-10 shrink-0 text-center font-mono text-[11px] text-muted">{time}</span>
+        <span className="w-10 shrink-0 text-center font-mono text-[11px] text-white">{time}</span>
         <SideSummary phase="B" count={m.teamB.length} avg={teamAvg(m.teamB)} reverse />
       </div>
 

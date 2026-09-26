@@ -16,6 +16,7 @@ export default async function NewMatchPage() {
           character_name: m.character_name,
           owner: m.owner,
           class: m.class,
+          level: m.level,
           elo: m.elo,
           games_played: m.games_played,
         }))}

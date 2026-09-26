@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { computeMatchElo, type TeamResult } from "@/lib/elo";
 import { cardClass, fieldClass } from "@/lib/ui";
-import { ClassBadge, ClassName } from "@/components/ClassIcon";
+import { ClassName } from "@/components/ClassIcon";
 import { PhaseIcon, ResultIcon } from "@/components/GameAssets";
 
 type Team = "A" | "B" | null;
@@ -15,6 +15,7 @@ interface MemberOption {
   character_name: string;
   owner: string | null;
   class: string | null;
+  level: string | null;
   elo: number;
   games_played: number;
 }
@@ -29,10 +30,6 @@ export function NewMatchForm({ members }: { members: MemberOption[] }) {
   const [query, setQuery] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState<null | {
-    teamA: { characterName: string; class: string | null; eloBefore: number; eloAfter: number; eloChange: number }[];
-    teamB: { characterName: string; class: string | null; eloBefore: number; eloAfter: number; eloChange: number }[];
-  }>(null);
 
   const teamAIds = useMemo(
     () => Object.entries(assignments).filter(([, t]) => t === "A").map(([id]) => Number(id)),
@@ -86,99 +83,20 @@ export function NewMatchForm({ members }: { members: MemberOption[] }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ teamAIds, teamBIds, result: winner as TeamResult, note: note || undefined }),
       });
-      const data = (await res.json()) as
-        | { error: string }
-        | {
-            teamA: { characterName: string; class: string | null; eloBefore: number; eloAfter: number; eloChange: number }[];
-            teamB: { characterName: string; class: string | null; eloBefore: number; eloAfter: number; eloChange: number }[];
-          };
-      if ("error" in data) throw new Error(data.error);
-      setSubmitted(data);
-      setAssignments({});
-      setNote("");
-      router.refresh();
+      const data = (await res.json()) as { error?: string };
+      if (data.error) throw new Error(data.error);
+      router.push("/matches");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Tạo trận đấu thất bại");
-    } finally {
       setSubmitting(false);
     }
   };
 
-  if (submitted) {
-    return (
-      <div className="flex flex-col gap-4">
-        <div className="rounded-lg border border-green-500/30 bg-green-500/5 p-4">
-          <p className="mb-3 font-display font-semibold tracking-wide text-green-400">
-            Đã lưu trận đấu!
-          </p>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <ResultTeam phase="A" align="left" won={winner === "A"} players={submitted.teamA} />
-            <ResultTeam phase="B" align="right" won={winner === "B"} players={submitted.teamB} />
-          </div>
-        </div>
-        <button
-          onClick={() => {
-            setSubmitted(null);
-            setWinner(null);
-          }}
-          className="self-start rounded-md border border-border bg-surface px-3 py-1.5 text-sm hover:bg-surface-raised"
-        >
-          Ghi trận đấu khác
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_400px] md:items-start">
-      {/* Chọn phe thắng + ghi chú — hiện trước trên mobile để khỏi cuộn qua cả roster mới bấm lưu được */}
-      <div className="order-1 sticky top-16 z-10 flex flex-col gap-4 bg-background pb-2 md:top-20 md:order-2 md:bg-transparent md:pb-0">
-        <div className="grid grid-cols-2 gap-2">
-          <PhaseColumn
-            phase="A"
-            align="left"
-            ids={teamAIds}
-            byId={byId}
-            preview={preview?.teamA}
-            overLimit={teamAIds.length > MAX_TEAM_SIZE}
-            selected={winner === "A"}
-            onSelect={() => setWinner("A")}
-          />
-          <PhaseColumn
-            phase="B"
-            align="right"
-            ids={teamBIds}
-            byId={byId}
-            preview={preview?.teamB}
-            overLimit={teamBIds.length > MAX_TEAM_SIZE}
-            selected={winner === "B"}
-            onSelect={() => setWinner("B")}
-          />
-        </div>
-        <p className="text-center text-xs text-muted">Bấm vào phe thắng ở trên</p>
-
-        <div className={cardClass + " flex flex-col gap-3 p-4"}>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-muted">Ghi chú (tùy chọn)</label>
-            <input
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              className={fieldClass}
-            />
-          </div>
-          <button
-            onClick={handleSubmit}
-            disabled={!canSubmit}
-            className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-accent/30 hover:bg-accent-strong disabled:opacity-40 disabled:shadow-none"
-          >
-            {submitting ? "Đang lưu..." : "Lưu trận đấu"}
-          </button>
-          {error && <p className="text-sm text-red-400">{error}</p>}
-        </div>
-      </div>
-
-      {/* Roster picker */}
-      <div className="order-2 flex flex-col gap-3 md:order-1">
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_400px]">
+        {/* Roster picker — the only thing that scrolls; height is fixed so it never grows with content */}
+        <div className="order-2 flex flex-col gap-3 md:order-1">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -187,7 +105,7 @@ export function NewMatchForm({ members }: { members: MemberOption[] }) {
         />
 
         <div className={"overflow-hidden " + cardClass}>
-          <div className="max-h-[32rem] overflow-y-auto">
+          <div className="h-[45vh] overflow-y-auto sm:h-[55vh]">
             <table className="w-full text-sm">
               <thead className="sticky top-0 z-10 bg-surface-raised text-left text-muted">
                 <tr>
@@ -202,10 +120,12 @@ export function NewMatchForm({ members }: { members: MemberOption[] }) {
                   return (
                     <tr key={m.id} className="border-t border-border">
                       <td className="px-3 py-2">
-                        <div className="flex items-center gap-2">
-                          <ClassBadge className={m.class} />
-                          <span className="font-medium">{m.character_name}</span>
-                        </div>
+                        <ClassName characterClass={m.class} iconClassName="h-5 w-5">
+                          <span className="font-medium">
+                            {m.character_name}
+                            {m.level && <span className="text-muted"> ({m.level})</span>}
+                          </span>
+                        </ClassName>
                       </td>
                       <td className="px-3 py-2 font-mono">{Math.round(m.elo)}</td>
                       <td className="px-3 py-2">
@@ -224,6 +144,50 @@ export function NewMatchForm({ members }: { members: MemberOption[] }) {
               </tbody>
             </table>
           </div>
+        </div>
+        </div>
+
+        {/* Chọn phe thắng + lưu */}
+        <div className="order-1 flex flex-col gap-2 md:order-2">
+          <div className="grid grid-cols-2 gap-2">
+            <PhaseColumn
+              phase="A"
+              align="left"
+              ids={teamAIds}
+              byId={byId}
+              preview={preview?.teamA}
+              overLimit={teamAIds.length > MAX_TEAM_SIZE}
+              selected={winner === "A"}
+              onSelect={() => setWinner("A")}
+            />
+            <PhaseColumn
+              phase="B"
+              align="right"
+              ids={teamBIds}
+              byId={byId}
+              preview={preview?.teamB}
+              overLimit={teamBIds.length > MAX_TEAM_SIZE}
+              selected={winner === "B"}
+              onSelect={() => setWinner("B")}
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Ghi chú (tùy chọn)"
+              className={fieldClass + " flex-1"}
+            />
+            <button
+              onClick={handleSubmit}
+              disabled={!canSubmit}
+              className="shrink-0 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-accent/30 hover:bg-accent-strong disabled:opacity-40 disabled:shadow-none"
+            >
+              {submitting ? "Đang lưu..." : "Lưu trận đấu"}
+            </button>
+          </div>
+          {error && <p className="text-sm text-red-400">{error}</p>}
         </div>
       </div>
     </div>
@@ -309,7 +273,8 @@ function PhaseColumn({
       ) : (
         <ul className="flex flex-col gap-0.5 text-sm">
           {ids.map((id) => {
-            const change = preview?.find((p) => p.id === id)?.eloChange;
+            const rawChange = preview?.find((p) => p.id === id)?.eloChange;
+            const change = rawChange !== undefined ? Math.round(rawChange) : undefined;
             return (
               <li
                 key={id}
@@ -335,44 +300,5 @@ function PhaseColumn({
         </ul>
       )}
     </button>
-  );
-}
-
-function ResultTeam({
-  phase,
-  align,
-  won,
-  players,
-}: {
-  phase: "A" | "B";
-  align: "left" | "right";
-  won: boolean;
-  players: { characterName: string; class: string | null; eloBefore: number; eloAfter: number; eloChange: number }[];
-}) {
-  const reverse = align === "right";
-  return (
-    <div>
-      <div className={"mb-1 flex items-center gap-2" + (reverse ? " flex-row-reverse" : "")}>
-        <PhaseIcon phase={phase} className="h-6" />
-        {won && <ResultIcon outcome="win" className="h-5" />}
-      </div>
-      <ul className="flex flex-col gap-0.5 text-sm">
-        {players.map((p) => (
-          <li
-            key={p.characterName}
-            className={"flex items-center justify-between gap-2" + (reverse ? " flex-row-reverse" : "")}
-          >
-            <ClassName characterClass={p.class} align={align}>
-              {p.characterName}
-            </ClassName>
-            <span className="shrink-0 font-mono text-xs">
-              {Math.round(p.eloBefore)} → {Math.round(p.eloAfter)} (
-              {p.eloChange > 0 ? "+" : ""}
-              {p.eloChange})
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
   );
 }

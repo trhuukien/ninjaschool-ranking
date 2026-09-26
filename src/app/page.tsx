@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { listMembers, type Member } from "@/lib/members";
-import { ImportButton } from "@/components/ImportButton";
 import { ClassName } from "@/components/ClassIcon";
 import { GameIcon, RoleBadge } from "@/components/GameAssets";
 
@@ -17,16 +16,13 @@ export default async function Home() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="font-display text-2xl font-bold tracking-wide text-foreground sm:text-3xl">
-            Bảng xếp hạng
-          </h1>
-          <p className="text-sm text-muted">
-            {members.length} thành viên · Elo khởi điểm 1000
-          </p>
-        </div>
-        <ImportButton />
+      <div>
+        <h1 className="font-display text-2xl font-bold tracking-wide text-foreground sm:text-3xl">
+          Bảng xếp hạng
+        </h1>
+        <p className="text-sm text-muted">
+          {members.length} nhẫn giả.
+        </p>
       </div>
 
       {members.length === 0 ? (

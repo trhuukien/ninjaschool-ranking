@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getMemberByName, getMemberMatchHistory, parseIdList } from "@/lib/members";
 import { cardClass } from "@/lib/ui";
@@ -22,23 +21,20 @@ export default async function MemberDetailPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-start gap-4">
+      <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:text-left">
         {member.avatar_id && (
           <GameIcon
             id={member.avatar_id}
             alt={member.character_name}
-            className="hidden h-20 w-20 shrink-0 rounded-md border border-border sm:block sm:h-24 sm:w-24"
+            className="h-20 w-20 shrink-0 rounded-md border border-border sm:h-24 sm:w-24"
           />
         )}
         <div className="min-w-0">
-          <Link href="/" className="text-sm text-muted hover:text-foreground">
-            ← Bảng xếp hạng
-          </Link>
-          <h1 className="mt-1 flex items-center gap-2 font-display text-2xl font-bold tracking-wide sm:text-3xl">
+          <h1 className="flex items-center justify-center gap-2 font-display text-2xl font-bold tracking-wide sm:justify-start sm:text-3xl">
             <RoleBadge iconId={member.icon} className="h-8 w-8 sm:h-9 sm:w-9" />
             {member.character_name}
           </h1>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted">
+          <div className="mt-1 flex flex-wrap items-center justify-center gap-2 text-sm text-muted sm:justify-start">
             <ClassBadge className={member.class} />
             <span>Cấp độ: {member.level || "—"}</span>
             <span>· PT: {member.pt || "—"}</span>
