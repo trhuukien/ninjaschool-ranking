@@ -6,6 +6,8 @@ import { requireAdmin } from "@/lib/auth/session";
 import {
   EQUIPMENT_SLOTS,
   HOLDERS,
+  MAX_STATS_LENGTH,
+  MAX_STATS_LINES,
   REFINE_MAX,
   REFINE_MIN,
   UPGRADE_MAX,
@@ -72,7 +74,8 @@ export async function updateMemberInfoAction(memberId: number, _prev: FormState,
 
 /**
  * Saves one holder's (main body or clone) look and gear together.
- * Appearance fields: `head`, `body`, `leg`, `yoroi` (sprite ids, blank = none).
+ * Appearance fields: `head`, `body`, `leg`, `yoroi` (sprite ids, blank = none);
+ * `stats`: the info box's free-text lines.
  * Per slot: `<slot>_icon` (blank = empty slot), `<slot>_upgrade` (-1..16)
  * and `<slot>_refine` (-1..9).
  */
@@ -97,7 +100,15 @@ export async function saveHolderAction(
         refine: intRequired(fd, `${slot.key}_refine`, `Tinh luyện ${slot.name}`, REFINE_MIN, REFINE_MAX),
       };
     }
-    await saveAppearance(memberId, holder, appearance);
+    // Info-box stat lines: free text, one per line, blank lines dropped.
+    const statLines = (typeof fd.get("stats") === "string" ? (fd.get("stats") as string) : "")
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+    if (statLines.length > MAX_STATS_LINES) throw new FormError(`Tối đa ${MAX_STATS_LINES} dòng chỉ số`);
+    const stats = statLines.join("\n");
+    if (stats.length > MAX_STATS_LENGTH) throw new FormError(`Chỉ số tối đa ${MAX_STATS_LENGTH} ký tự`);
+    await saveAppearance(memberId, holder, appearance, stats || null);
     await saveEquipment(memberId, holder, equipment);
     revalidatePath("/", "layout");
     return { message: "Đã lưu" };

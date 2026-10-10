@@ -22,9 +22,16 @@ interface MemberOption {
 
 const MAX_TEAM_SIZE = 6;
 
-export function NewMatchForm({ members }: { members: MemberOption[] }) {
+export function NewMatchForm({
+  members,
+  initialAssignments = {},
+}: {
+  members: MemberOption[];
+  /** Pre-filled sides, e.g. from the team randomizer's "Ghi trận này". */
+  initialAssignments?: Record<number, Team>;
+}) {
   const router = useRouter();
-  const [assignments, setAssignments] = useState<Record<number, Team>>({});
+  const [assignments, setAssignments] = useState<Record<number, Team>>(initialAssignments);
   const [winner, setWinner] = useState<Winner>(null);
   const [note, setNote] = useState("");
   const [query, setQuery] = useState("");

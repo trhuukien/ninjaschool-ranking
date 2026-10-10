@@ -45,3 +45,55 @@ export interface EquippedItem {
 
 /** A holder's gear keyed by slot; missing keys are empty slots. */
 export type Equipment = Partial<Record<SlotKey, EquippedItem>>;
+
+// ---------------------------------------------------------------------------
+// The info box inside the panel's orange frame.
+
+/** School ("Trường") per class, as in the game. */
+export const SCHOOL_BY_CLASS: Record<string, string> = {
+  Kunai: "Ookaza",
+  Cung: "Ookaza",
+  Kiếm: "Hirosaki",
+  Tiêu: "Hirosaki",
+  Quạt: "Haruna",
+  Đao: "Haruna",
+};
+
+export interface InfoLine {
+  text: string;
+  /** Class and school lines are drawn in the game's cyan. */
+  highlight?: boolean;
+  /** Drawn blurred so it can't be read (the clone's class and school). */
+  blurred?: boolean;
+}
+
+export const MAX_STATS_LENGTH = 1500;
+export const MAX_STATS_LINES = 30;
+
+/**
+ * Lines for a holder's info box: five fixed ones built from the member
+ * (name, "Hiếu chiến" always 0, level, class, school), then the admin's own
+ * stat lines. For the clone the first line reads "Phân thân" and the class
+ * and school lines are blurred out.
+ */
+export function infoLines(
+  name: string,
+  level: number | null,
+  klass: string | null,
+  stats: string | null,
+  holder: Holder = "main",
+): InfoLine[] {
+  const clone = holder === "clone";
+  const lines: InfoLine[] = [
+    { text: `${clone ? "Phân thân" : "Nhân vật"}: ${name}` },
+    { text: "Hiếu chiến: 0" },
+    { text: `Trình độ: ${level ?? "—"}` },
+    { text: `Lớp: ${klass ? `Ninja ${klass}` : "—"}`, highlight: true, blurred: clone },
+    { text: `Trường: ${(klass && SCHOOL_BY_CLASS[klass]) || "—"}`, highlight: true, blurred: clone },
+  ];
+  for (const raw of (stats ?? "").split("\n")) {
+    const text = raw.trim();
+    if (text) lines.push({ text });
+  }
+  return lines;
+}

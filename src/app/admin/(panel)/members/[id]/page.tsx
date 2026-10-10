@@ -64,7 +64,7 @@ export default async function AdminMemberPage({ params }: { params: Promise<{ id
             <Field label="Cấp độ">
               <TextInput name="level" type="number" min={0} max={999} defaultValue={member.level ?? ""} />
             </Field>
-            <Field label="PT">
+            <Field label="Cấp PT (phân thân)">
               <TextInput name="pt" type="number" min={0} max={999} defaultValue={member.pt ?? ""} />
             </Field>
             <Field label="Chức vụ">
@@ -101,9 +101,15 @@ export default async function AdminMemberPage({ params }: { params: Promise<{ id
           <h2 className="mb-3 font-display text-lg font-semibold">{HOLDER_LABEL[holder]}</h2>
           <HolderEditor
             action={saveHolderAction.bind(null, id, holder)}
-            title={holder === "main" ? "Trang bị" : HOLDER_LABEL.clone}
             equipment={gear.equipment[holder]}
             appearanceIds={gear.appearanceIds[holder]}
+            stats={gear.stats[holder]}
+            member={{
+              name: member.character_name,
+              level: holder === "main" ? member.level : member.pt,
+              class: member.class,
+              holder,
+            }}
             sprites={sprites}
           />
         </section>

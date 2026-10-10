@@ -55,3 +55,6 @@ next-env.d.ts
 # the D1Database/CloudflareEnv types it declares, and doesn't run
 # `wrangler types` itself. Regenerate with `npm run cf-typegen` after any
 # wrangler.jsonc binding change and commit the result.
+
+# local-only SQL (e.g. admin seed with a password hash)
+*.local.sql

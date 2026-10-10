@@ -148,6 +148,93 @@ button:disabled,
   animation-iteration-count: infinite;
 }
 
+/*
+  Member profile on desktop: the page is pinned to exactly one viewport
+  height, and the profile layout takes whatever main has left between the
+  nav and the footer (no hard-coded heights, so a taller nav or a different
+  zoom can't push it over). Only the match history scrolls — and the
+  equipment column, on screens too short for both panels.
+*/
+@media (min-width: 64rem) {
+  body:has(.profile-fit) {
+    height: 100dvh;
+    overflow: hidden;
+  }
+  main:has(> .profile-fit) {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .profile-fit {
+    flex: 1;
+    min-height: 0;
+  }
+}
+
+/* The equipment window's "Thông tin" box: scrolls (wheel, drag, swipe) with no visible scrollbar. */
+.info-scroll {
+  scrollbar-width: none;
+}
+.info-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Team randomizer (/random): the battle screen's entrances and the reel's win flash. */
+@keyframes vs-enter-left {
+  from {
+    opacity: 0;
+    translate: -80px 0;
+  }
+}
+
+@keyframes vs-enter-right {
+  from {
+    opacity: 0;
+    translate: 80px 0;
+  }
+}
+
+@keyframes vs-pulse {
+  50% {
+    scale: 1.18;
+  }
+}
+
+@keyframes reel-win {
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px var(--gold);
+  }
+  50% {
+    box-shadow: 0 0 18px 6px var(--gold);
+  }
+}
+
+.vs-enter-left {
+  animation: vs-enter-left 0.5s ease-out both;
+}
+
+.vs-enter-right {
+  animation: vs-enter-right 0.5s ease-out both;
+}
+
+.vs-pulse {
+  animation: vs-pulse 0.9s ease-in-out infinite;
+}
+
+.reel-win {
+  animation: reel-win 0.6s ease-in-out 3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vs-enter-left,
+  .vs-enter-right,
+  .vs-pulse,
+  .reel-win {
+    animation: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sprite-frame,
   .char-breathe,

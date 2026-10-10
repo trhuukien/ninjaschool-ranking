@@ -1,9 +1,13 @@
+"use client";
+
+import { useRef, useState } from "react";
 import { GameIcon } from "@/components/GameAssets";
 import {
   BOTTOM_SLOTS_WITH_REFINE,
   EQUIPMENT_SLOTS,
   type Equipment,
   type EquippedItem,
+  type InfoLine,
 } from "@/lib/equipment";
 import type { Appearance } from "@/lib/members";
 import type { Sprite } from "@/lib/sprites";
@@ -12,19 +16,20 @@ import { FRAME_EDGE, FrameOrnaments } from "@/components/EquipmentFrame";
 // Replica of the in-game "Trang bị" screen. Colours are sampled from it.
 const PANEL_BG = "#662200";
 const FRAME_ORANGE = "#c8862e";
+/** The in-game window's width; narrow enough that the bottom row's six slots sit close together. */
+export const WINDOW_WIDTH = 360;
+const INFO_CYAN = "#1ad8ff";
 const SLOT_BG = "#2e0d04";
 const EXTRA_SLOT_BG = "#001919";
 const EXTRA_EMPTY_BG = "#000000";
 
-// Crisp 1px black outline (all 8 directions) for the white tinh luyện number.
-const OUTLINE_1PX = [-1, 0, 1]
-  .flatMap((x) => [-1, 0, 1].map((y) => [x, y]))
-  .filter(([x, y]) => x || y)
-  .map(([x, y]) => `${x}px ${y}px 0 #000`)
-  .join(", ");
-
 // The game's dark speckle sprite drawn behind every equipped item.
 const ITEM_SHADOW_ICON = 154;
+const ITEM_SHADOW_SIZE = { width: 62, height: 68 };
+// The sprite's first 2 rows hold only a black bar the game never shows; row 3
+// is empty, so cutting 3 keeps the bar from peeking through at fractional
+// scales (e.g. 125% Windows display scaling).
+const ITEM_SHADOW_CROP_TOP = 3;
 
 
 const DOT_RED = "#fe0019";
@@ -87,7 +92,6 @@ function ItemSlot({
   iconPadding = 10,
   placeholder,
   showRefine = true,
-  shadow = true,
 }: {
   item: EquippedItem | undefined;
   name: string;
@@ -98,8 +102,6 @@ function ItemSlot({
   placeholder?: string;
   /** Show the tinh luyện number in the bottom-right corner (when the item has one). */
   showRefine?: boolean;
-  /** Draw the dark speckle sprite behind the item, as the game does for gear. */
-  shadow?: boolean;
 }) {
   const tier = item ? UPGRADE[item.upgrade] : undefined;
   return (
@@ -108,20 +110,33 @@ function ItemSlot({
       style={{ width: SLOT, height: SLOT, background: tier?.bg ?? (item ? baseBg : emptyBg) }}
       title={name}
     >
-      {item && shadow && (
+      {item && (
+        // The game's own background sprite, drawn at the same scale as the
+        // item icons (64px icon -> SLOT - 2 * iconPadding), the way the game
+        // shows it: its top rows (a stray black bar) cropped off, scaled down
+        // nearest-neighbour so the speckles stay sparse, and ~20% darker
+        // (measured against the in-game screen).
         <div
-          className="absolute"
-          // Only a thin dark fringe around the item, like the game: the sprite is
-          // darkened (it has light speckles of its own) and scaled past the box
-          // so the stray mark in its top-left corner is clipped off.
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 overflow-hidden"
           style={{
-            inset: 9,
-            background: `url(/icons/game/${ITEM_SHADOW_ICON}.png) center / 120% no-repeat`,
-            filter: "brightness(0.45) saturate(0.3)",
-            opacity: 0.8,
+            width: ITEM_SHADOW_SIZE.width * ((SLOT - 2 * iconPadding) / 64),
+            height: (ITEM_SHADOW_SIZE.height - ITEM_SHADOW_CROP_TOP) * ((SLOT - 2 * iconPadding) / 64),
           }}
           aria-hidden
-        />
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`/icons/game/${ITEM_SHADOW_ICON}.png`}
+            alt=""
+            className="absolute left-0 max-w-none [image-rendering:pixelated]"
+            style={{
+              top: -ITEM_SHADOW_CROP_TOP * ((SLOT - 2 * iconPadding) / 64),
+              width: ITEM_SHADOW_SIZE.width * ((SLOT - 2 * iconPadding) / 64),
+              height: ITEM_SHADOW_SIZE.height * ((SLOT - 2 * iconPadding) / 64),
+              filter: "brightness(0.8)",
+            }}
+          />
+        </div>
       )}
       {item ? (
         <div className="relative h-full w-full" style={{ padding: iconPadding }}>
@@ -135,20 +150,23 @@ function ItemSlot({
       {item && showRefine && item.refine >= 0 && (
         <span
           className="absolute text-[11px] font-bold leading-none text-white"
-          style={{ right: 4, bottom: 3, textShadow: OUTLINE_1PX }}
+          // Black outline from a text stroke painted behind the fill, so it
+          // follows the glyph evenly and leaves the white digit full width.
+          style={{ right: 4, bottom: 3, WebkitTextStroke: "2px #000", paintOrder: "stroke fill" }}
         >
           {item.refine}
         </span>
       )}
       {tier && (
-        // The dots run just outside the slot, offset up-left like the game:
-        // 2px out on the top/left, on the edge at the bottom/right. With the
-        // 2px GAP that puts a slot's bottom track on exactly the same row as
-        // the next slot's top track, so dots passing each other line up.
-        // They sit above neighbouring slots, which would otherwise cover them.
+        // The dots hug the slot: their track runs half a GAP (1px) outside the
+        // edge on every side, so the 2px trail dots sit right against it and
+        // the 4px head overlaps it by 1px. Half a GAP each way also puts a
+        // slot's bottom track on exactly the next slot's top track, so dots
+        // passing each other line up. They sit above neighbouring slots,
+        // which would otherwise cover them.
         <div
           className="pointer-events-none absolute"
-          style={{ top: -GAP, left: -GAP, right: 0, bottom: 0, zIndex: 10 }}
+          style={{ inset: -GAP / 2, zIndex: 10 }}
           aria-hidden
         >
           {DOT_QUARTERS[tier.dots.length].map((quarter, d) =>
@@ -249,12 +267,22 @@ function SpriteLayer({ sprite, breathe }: { sprite: Sprite; breathe: boolean }) 
 }
 
 /**
- * The character standing in the middle of the panel, built from separate
- * sprites. Painted yoroi, leg, head, body (the yoroi hangs behind, the
- * shoulder pads sit over the hair); everything but the legs bobs 1px for the
- * game's idle "breathing".
+ * A standing character built from separate sprites, in a box of
+ * CHAR_BOX x scale. Painted yoroi, leg, head, body (the yoroi hangs behind,
+ * the shoulder pads sit over the hair); everything but the legs bobs 1px for
+ * the game's idle "breathing". `mirrored` flips it to face left.
  */
-function CharacterSprite({ appearance }: { appearance: Appearance }) {
+export function CharacterFigure({
+  appearance,
+  scale = CHAR_SCALE,
+  mirrored = false,
+  className = "",
+}: {
+  appearance: Appearance;
+  scale?: number;
+  mirrored?: boolean;
+  className?: string;
+}) {
   const layers = (["yoroi", "leg", "head", "body"] as const).flatMap((part) => {
     const sprite = appearance[part];
     return sprite && sprite.frames.length > 0 ? [{ part, sprite }] : [];
@@ -262,17 +290,18 @@ function CharacterSprite({ appearance }: { appearance: Appearance }) {
   if (layers.length === 0) return null;
   return (
     <div
-      className="pointer-events-none absolute -translate-x-1/2"
-      style={{
-        left: `calc(50% + ${CHAR_SHIFT_X}px)`,
-        top: CHAR_TOP - CHAR_ORIGIN.y * CHAR_SCALE,
-        width: CHAR_BOX.width * CHAR_SCALE,
-        height: CHAR_BOX.height * CHAR_SCALE,
-      }}
+      className={"pointer-events-none relative " + className}
+      style={{ width: CHAR_BOX.width * scale, height: CHAR_BOX.height * scale }}
     >
       <div
-        className="relative origin-top-left"
-        style={{ width: CHAR_BOX.width, height: CHAR_BOX.height, transform: `scale(${CHAR_SCALE})` }}
+        className="absolute left-0 top-0 origin-top-left"
+        style={{
+          width: CHAR_BOX.width,
+          height: CHAR_BOX.height,
+          transform: mirrored
+            ? `translateX(${CHAR_BOX.width * scale}px) scale(${-scale}, ${scale})`
+            : `scale(${scale})`,
+        }}
       >
         {layers.map(({ part, sprite }) => (
           <SpriteLayer key={part} sprite={sprite} breathe={part !== "leg"} />
@@ -282,9 +311,21 @@ function CharacterSprite({ appearance }: { appearance: Appearance }) {
   );
 }
 
-/** Yellow arrow beside the title; nudges outward and back like the game's. */
-function TitleArrow({ flip = false }: { flip?: boolean }) {
+/** The character standing in the middle of the equipment panel. */
+function CharacterSprite({ appearance }: { appearance: Appearance }) {
   return (
+    <div
+      className="absolute -translate-x-1/2"
+      style={{ left: `calc(50% + ${CHAR_SHIFT_X}px)`, top: CHAR_TOP - CHAR_ORIGIN.y * CHAR_SCALE }}
+    >
+      <CharacterFigure appearance={appearance} />
+    </div>
+  );
+}
+
+/** Yellow arrow beside the title; nudges outward and back like the game's. */
+function TitleArrow({ flip = false, onClick, label }: { flip?: boolean; onClick?: () => void; label?: string }) {
+  const arrow = (
     <svg
       viewBox="0 0 12 14"
       className={"h-3.5 w-3 " + (flip ? "title-arrow-right -scale-x-100" : "title-arrow-left")}
@@ -294,26 +335,42 @@ function TitleArrow({ flip = false }: { flip?: boolean }) {
       <path d="M0 7 L7 0 L7 4 L12 4 L12 10 L7 10 L7 14 Z" fill="#ffe200" stroke="#7a4a00" strokeWidth="0.8" />
     </svg>
   );
+  if (!onClick) return arrow;
+  // A generous hit area around the small arrow, for thumbs.
+  return (
+    <button type="button" onClick={onClick} aria-label={label} className="-m-3 p-3">
+      {arrow}
+    </button>
+  );
 }
 
 const LEFT_SLOTS = EQUIPMENT_SLOTS.filter((s) => s.area === "left");
 const RIGHT_SLOTS = EQUIPMENT_SLOTS.filter((s) => s.area === "right");
 const BOTTOM_SLOTS = EQUIPMENT_SLOTS.filter((s) => s.area === "bottom");
 
-export function EquipmentPanel({
-  equipment,
-  title = "Trang bị",
-  appearance,
+/**
+ * The game's grey-framed window: ornaments, the title box with its yellow
+ * arrows (buttons when onPrev/onNext are given), and the content below. It
+ * stretches to fill its container's height, so stacked windows match.
+ */
+export function GameWindow({
+  title,
+  onPrev,
+  onNext,
+  children,
 }: {
-  equipment: Equipment;
-  title?: string;
-  appearance?: Appearance;
+  title: string;
+  onPrev?: () => void;
+  onNext?: () => void;
+  children: React.ReactNode;
 }) {
   return (
     <div
-      className="relative mx-auto mt-3 w-full max-w-[372px] px-3 pb-3 pt-1 text-white"
+      className="relative mx-auto mt-3 flex h-[calc(100%-0.75rem)] w-full flex-col px-3 pb-3 pt-1 text-white"
       style={{
+        maxWidth: WINDOW_WIDTH,
         background: PANEL_BG,
+        fontFamily: "var(--font-game), sans-serif",
         // The 4px grey edge, outermost pixel first; FrameOrnaments line up with it.
         boxShadow: FRAME_EDGE.map((c, i) => `inset 0 0 0 ${i + 1}px ${c}`).join(", "),
       }}
@@ -321,13 +378,34 @@ export function EquipmentPanel({
       <FrameOrnaments />
 
       <div className="mb-2.5 mt-3 flex items-center justify-center gap-5">
-        <TitleArrow />
+        <TitleArrow onClick={onPrev} label="Xem bảng trước" />
         <div className="border-2 border-[#e84c00] bg-[#3d1200] px-6 py-1.5 text-[17px] leading-tight text-[#ffe83a]">
           {title}
         </div>
-        <TitleArrow flip />
+        <TitleArrow flip onClick={onNext} label="Xem bảng sau" />
       </div>
 
+      {children}
+    </div>
+  );
+}
+
+/** The "Trang bị" tab: gear slots around the standing character. */
+export function EquipmentPanel({
+  equipment,
+  title = "Trang bị",
+  appearance,
+  onPrev,
+  onNext,
+}: {
+  equipment: Equipment;
+  title?: string;
+  appearance?: Appearance;
+  onPrev?: () => void;
+  onNext?: () => void;
+}) {
+  return (
+    <GameWindow title={title} onPrev={onPrev} onNext={onNext}>
       <div className="relative flex justify-between">
         {/* Orange frame over rows 3-5, between the two slot columns. */}
         <div
@@ -357,12 +435,94 @@ export function EquipmentPanel({
               iconPadding={10}
               placeholder={slot.name.toLowerCase()}
               showRefine={BOTTOM_SLOTS_WITH_REFINE.includes(slot.key)}
-              shadow={false}
             />
           </div>
         ))}
       </div>
-    </div>
+    </GameWindow>
+  );
+}
+
+/**
+ * The "Thông tin" tab: the character's info lines in a white-bordered box —
+ * white text, class/school in the game's cyan, the name line a size up.
+ * Like the game, pressing a line moves the yellow pointer there (it stays
+ * after release; none until the first press). Every line keeps room for it
+ * so nothing shifts when it appears.
+ */
+export function InfoPanel({ info, onPrev, onNext }: { info: InfoLine[]; onPrev?: () => void; onNext?: () => void }) {
+  const [pressed, setPressed] = useState<number | null>(null);
+
+  // Mouse drag scrolls the box (the scrollbar itself is hidden); touch
+  // already scrolls natively by swiping.
+  const glide = useRef(0);
+  const startDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType !== "mouse" || e.button !== 0) return;
+    cancelAnimationFrame(glide.current);
+    const box = e.currentTarget;
+    const startY = e.clientY;
+    const startTop = box.scrollTop;
+    // Recent pointer samples, to know how fast the drag was at release.
+    let samples: { y: number; t: number }[] = [{ y: e.clientY, t: e.timeStamp }];
+    const move = (ev: PointerEvent) => {
+      box.scrollTop = startTop - (ev.clientY - startY);
+      samples = [...samples, { y: ev.clientY, t: ev.timeStamp }].filter((s) => ev.timeStamp - s.t < 150);
+    };
+    const end = (ev: PointerEvent) => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", end);
+      // Keep gliding at the release speed, easing out (momentum like a swipe).
+      const first = samples[0];
+      const dt = ev.timeStamp - first.t;
+      let velocity = dt > 0 && dt < 300 ? (first.y - ev.clientY) / dt : 0; // px per ms
+      let last = performance.now();
+      const step = (now: number) => {
+        const elapsed = now - last;
+        last = now;
+        box.scrollTop += velocity * elapsed;
+        velocity *= Math.pow(0.95, elapsed / 16);
+        if (Math.abs(velocity) > 0.02) glide.current = requestAnimationFrame(step);
+      };
+      if (Math.abs(velocity) > 0.05) glide.current = requestAnimationFrame(step);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", end);
+  };
+  return (
+    <GameWindow title="Thông tin" onPrev={onPrev} onNext={onNext}>
+      {/* The lines sit absolutely inside the box, so a long list never makes
+          the window taller than the gear tab; it scrolls instead. */}
+      <div
+        className="relative min-h-24 flex-1 border-2 border-[#f3ead2] bg-[#3a1204]"
+        // Inset from the window edges like the game's info box.
+        style={{ marginInline: 14, marginBottom: 10 }}
+      >
+        <div
+          className="info-scroll absolute inset-0 cursor-grab select-none overflow-y-auto py-1.5 pl-1 pr-2.5 active:cursor-grabbing"
+          onPointerDown={startDrag}
+        >
+          {info.map((line, i) => (
+            <p
+              key={i}
+              onPointerDown={() => setPressed(i)}
+              className={"flex items-center " + (i === 0 ? "text-[17px] leading-[24px]" : "text-[14px] leading-[21px]")}
+              style={{ color: line.highlight ? INFO_CYAN : "#ffffff" }}
+            >
+              <svg
+                viewBox="0 0 12 14"
+                className={"mr-1 h-3 w-2.5 shrink-0 -scale-x-100 " + (pressed === i ? "" : "invisible")}
+                aria-hidden
+              >
+                <path d="M0 7 L7 0 L7 4 L12 4 L12 10 L7 10 L7 14 Z" fill="#ffe200" stroke="#7a4a00" strokeWidth="0.8" />
+              </svg>
+              <span className="truncate" style={line.blurred ? { filter: "blur(4px)" } : undefined}>
+                {line.text}
+              </span>
+            </p>
+          ))}
+        </div>
+      </div>
+    </GameWindow>
   );
 }
 

@@ -65,6 +65,13 @@ export async function getMember(id: number): Promise<Member | undefined> {
   return row ?? undefined;
 }
 
+/** 1-based position on the Elo ranking (ties share a rank). */
+export async function getMemberRank(elo: number): Promise<number> {
+  const db = await getDb();
+  const row = await db.prepare("SELECT COUNT(*) AS n FROM members WHERE elo > ?").bind(elo).first<{ n: number }>();
+  return (row?.n ?? 0) + 1;
+}
+
 export async function getMemberByName(characterName: string): Promise<Member | undefined> {
   const db = await getDb();
   const row = await db
@@ -96,6 +103,8 @@ export interface MemberGear {
   equipment: Record<Holder, Equipment>;
   appearanceIds: Record<Holder, AppearanceIds>;
   appearance: Record<Holder, Appearance>;
+  /** Free-text stat lines for each holder's info box. */
+  stats: Record<Holder, string | null>;
 }
 
 const EMPTY_IDS: AppearanceIds = { head: null, body: null, leg: null, yoroi: null };
@@ -108,7 +117,7 @@ export async function getMemberGear(memberId: number): Promise<MemberGear> {
       .bind(memberId),
     db
       .prepare(
-        `SELECT holder, head_sprite_id, body_sprite_id, leg_sprite_id, yoroi_sprite_id
+        `SELECT holder, head_sprite_id, body_sprite_id, leg_sprite_id, yoroi_sprite_id, stats
            FROM member_appearance WHERE member_id = ?`,
       )
       .bind(memberId),
@@ -126,13 +135,16 @@ export async function getMemberGear(memberId: number): Promise<MemberGear> {
   }
 
   const appearanceIds: Record<Holder, AppearanceIds> = { main: { ...EMPTY_IDS }, clone: { ...EMPTY_IDS } };
+  const stats: Record<Holder, string | null> = { main: null, clone: null };
   for (const r of lookRes.results as {
     holder: Holder;
     head_sprite_id: number | null;
     body_sprite_id: number | null;
     leg_sprite_id: number | null;
     yoroi_sprite_id: number | null;
+    stats: string | null;
   }[]) {
+    stats[r.holder] = r.stats;
     appearanceIds[r.holder] = {
       head: r.head_sprite_id,
       body: r.body_sprite_id,
@@ -155,7 +167,58 @@ export async function getMemberGear(memberId: number): Promise<MemberGear> {
     equipment,
     appearanceIds,
     appearance: { main: resolve(appearanceIds.main), clone: resolve(appearanceIds.clone) },
+    stats,
   };
+}
+
+/** A member as the team randomizer needs them: who, how strong, how they look. */
+export interface MemberCard {
+  id: number;
+  character_name: string;
+  class: string | null;
+  avatar_id: number | null;
+  elo: number;
+  games_played: number;
+  /** The main body's look. */
+  appearance: Appearance;
+}
+
+export async function listMemberCards(): Promise<MemberCard[]> {
+  const db = await getDb();
+  const [membersRes, lookRes] = await db.batch([
+    db.prepare("SELECT id, character_name, class, avatar_id, elo, games_played FROM members ORDER BY elo DESC, character_name"),
+    db.prepare(
+      `SELECT member_id, head_sprite_id, body_sprite_id, leg_sprite_id, yoroi_sprite_id
+         FROM member_appearance WHERE holder = 'main'`,
+    ),
+  ]);
+  const looks = new Map(
+    (lookRes.results as {
+      member_id: number;
+      head_sprite_id: number | null;
+      body_sprite_id: number | null;
+      leg_sprite_id: number | null;
+      yoroi_sprite_id: number | null;
+    }[]).map((r) => [r.member_id, r]),
+  );
+  const sprites = await getSpritesByIds(
+    [...looks.values()].flatMap((r) =>
+      [r.head_sprite_id, r.body_sprite_id, r.leg_sprite_id, r.yoroi_sprite_id].filter((id): id is number => id !== null),
+    ),
+  );
+  const pick = (id: number | null | undefined) => (id ? (sprites.get(id) ?? null) : null);
+  return (membersRes.results as Omit<MemberCard, "appearance">[]).map((m) => {
+    const look = looks.get(m.id);
+    return {
+      ...m,
+      appearance: {
+        head: pick(look?.head_sprite_id),
+        body: pick(look?.body_sprite_id),
+        leg: pick(look?.leg_sprite_id),
+        yoroi: pick(look?.yoroi_sprite_id),
+      },
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -224,24 +287,31 @@ export async function saveEquipment(memberId: number, holder: Holder, equipment:
   ]);
 }
 
-export async function saveAppearance(memberId: number, holder: Holder, ids: AppearanceIds): Promise<void> {
+/** A holder's look and its free-text stat lines. */
+export async function saveAppearance(
+  memberId: number,
+  holder: Holder,
+  ids: AppearanceIds,
+  stats: string | null,
+): Promise<void> {
   const db = await getDb();
   await db
     .prepare(
-      `INSERT INTO member_appearance (member_id, holder, head_sprite_id, body_sprite_id, leg_sprite_id, yoroi_sprite_id)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+      `INSERT INTO member_appearance (member_id, holder, head_sprite_id, body_sprite_id, leg_sprite_id, yoroi_sprite_id, stats)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
        ON CONFLICT(member_id, holder) DO UPDATE SET
          head_sprite_id = excluded.head_sprite_id,
          body_sprite_id = excluded.body_sprite_id,
          leg_sprite_id = excluded.leg_sprite_id,
-         yoroi_sprite_id = excluded.yoroi_sprite_id`,
+         yoroi_sprite_id = excluded.yoroi_sprite_id,
+         stats = excluded.stats`,
     )
-    .bind(memberId, holder, ids.head, ids.body, ids.leg, ids.yoroi)
+    .bind(memberId, holder, ids.head, ids.body, ids.leg, ids.yoroi, stats)
     .run();
 }
 
 /**
- * Copies a member's info, appearance and equipment (both holders) to a new
+ * Copies a member's info, appearance, stats and equipment (both holders) to a new
  * member called `newName`. The copy starts with a fresh 1000 Elo and no
  * matches. Returns the new member's id.
  */
@@ -259,8 +329,8 @@ export async function duplicateMember(sourceId: number, newName: string): Promis
   await db.batch([
     db
       .prepare(
-        `INSERT INTO member_appearance (member_id, holder, head_sprite_id, body_sprite_id, leg_sprite_id, yoroi_sprite_id)
-         SELECT ?1, holder, head_sprite_id, body_sprite_id, leg_sprite_id, yoroi_sprite_id
+        `INSERT INTO member_appearance (member_id, holder, head_sprite_id, body_sprite_id, leg_sprite_id, yoroi_sprite_id, stats)
+         SELECT ?1, holder, head_sprite_id, body_sprite_id, leg_sprite_id, yoroi_sprite_id, stats
            FROM member_appearance WHERE member_id = ?2`,
       )
       .bind(row.id, sourceId),

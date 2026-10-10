@@ -68,7 +68,7 @@ CREATE TABLE members (
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
--- How the main body ("main") and the clone ("clone") look.
+-- How the main body ("main") and the clone ("clone") look, plus their stats.
 CREATE TABLE member_appearance (
   member_id INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
   holder TEXT NOT NULL CHECK (holder IN ('main', 'clone')),
@@ -76,6 +76,8 @@ CREATE TABLE member_appearance (
   body_sprite_id INTEGER REFERENCES sprites(id) ON DELETE SET NULL,
   leg_sprite_id INTEGER REFERENCES sprites(id) ON DELETE SET NULL,
   yoroi_sprite_id INTEGER REFERENCES sprites(id) ON DELETE SET NULL,
+  -- Free text for the panel's info box, one stat per line (HP, MP, ...).
+  stats TEXT,
   PRIMARY KEY (member_id, holder)
 );
 

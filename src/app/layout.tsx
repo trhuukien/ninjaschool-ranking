@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Oswald } from "next/font/google";
+import { Geist, Geist_Mono, Oswald, Roboto_Condensed } from "next/font/google";
 import { NavBar } from "@/components/NavBar";
 import { Footer } from "@/components/Footer";
 import { getCurrentAdmin } from "@/lib/auth/session";
@@ -21,6 +21,13 @@ const oswald = Oswald({
   weight: ["500", "600", "700"],
 });
 
+// Narrow, tall sans for text inside the in-game windows, closest to the game's own font.
+const gameFont = Roboto_Condensed({
+  variable: "--font-game",
+  subsets: ["latin", "vietnamese"],
+  weight: ["400", "500"],
+});
+
 export const metadata: Metadata = {
   title: "Ninjaschool Ranking",
   description: "Bảng xếp hạng Elo và lịch sử lôi đài của Ninjaschool",
@@ -33,7 +40,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="vi"
-      className={`${geistSans.variable} ${geistMono.variable} ${oswald.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${oswald.variable} ${gameFont.variable} h-full antialiased`}
     >
       <body className="flex min-h-screen flex-col overflow-x-hidden bg-background text-foreground">
         <NavBar isAdmin={admin !== null} />

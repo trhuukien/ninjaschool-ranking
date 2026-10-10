@@ -1,14 +1,18 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { EquipmentPanel } from "@/components/EquipmentPanel";
+import { HolderWindow } from "@/components/EquipmentPanels";
+import { WINDOW_WIDTH } from "@/components/EquipmentPanel";
 import {
   EQUIPMENT_SLOTS,
+  MAX_STATS_LINES,
   REFINE_MAX,
   REFINE_MIN,
   UPGRADE_MAX,
   UPGRADE_MIN,
+  infoLines,
   type Equipment,
+  type Holder,
   type SlotKey,
 } from "@/lib/equipment";
 import type { Appearance, AppearanceIds } from "@/lib/members";
@@ -22,6 +26,23 @@ const range = (from: number, to: number) => Array.from({ length: to - from + 1 }
 const UPGRADES = range(UPGRADE_MIN, UPGRADE_MAX);
 const REFINES = range(REFINE_MIN, REFINE_MAX);
 
+const STATS_PLACEHOLDER = [
+  "HP: 28221/28221",
+  "MP: 21875/21919",
+  "Tốc độ: 9",
+  "Tấn công: 113711-126345",
+  "Hỏa chống: 1858",
+  "Băng chống: 2204",
+  "Phong chống: 948",
+  "Giảm sát thương: 444",
+  "Độ chính xác: 2504",
+  "Khả năng né đòn: 4226",
+  "Chí mạng: 820",
+  "Phản đòn cận chiến: 302",
+  "Cường khắc: 280",
+  "Hạ khắc: 0",
+].join("\n");
+
 const compact =
   "h-8 rounded border border-border bg-surface px-1.5 text-xs text-foreground focus:border-accent focus:outline-none";
 
@@ -32,13 +53,16 @@ const compact =
  */
 export function HolderEditor({
   action,
-  title,
   equipment,
   appearanceIds,
   sprites,
+  member,
+  stats: initialStats,
 }: {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
-  title: string;
+  /** For the info box's fixed lines (name, level, class, school). */
+  member: { name: string; level: number | null; class: string | null; holder: Holder };
+  stats: string | null;
   equipment: Equipment;
   appearanceIds: AppearanceIds;
   sprites: Sprite[];
@@ -53,6 +77,8 @@ export function HolderEditor({
       ) as Record<SlotKey, SlotDraft>,
   );
   const [look, setLook] = useState<AppearanceIds>(appearanceIds);
+  const [stats, setStats] = useState(initialStats ?? "");
+  const info = infoLines(member.name, member.level, member.class, stats, member.holder);
 
   const preview = useMemo(() => {
     const eq: Equipment = {};
@@ -122,7 +148,7 @@ export function HolderEditor({
   };
 
   return (
-    <ActionForm action={action} submitLabel={`Lưu ${title.toLowerCase()}`}>
+    <ActionForm action={action} submitLabel="Lưu">
       <div className="flex flex-wrap gap-2">
         {SPRITE_KINDS.map((kind) => (
           <label key={kind} className="flex flex-col gap-0.5">
@@ -150,8 +176,8 @@ export function HolderEditor({
         <div className="flex flex-col gap-2 lg:mt-16">
           {EQUIPMENT_SLOTS.filter((s) => s.area === "left").map(slotInput)}
         </div>
-        <div className="w-full max-w-[372px] shrink-0">
-          <EquipmentPanel equipment={preview.eq} appearance={preview.appearance} title={title} />
+        <div className="w-full shrink-0" style={{ maxWidth: WINDOW_WIDTH }}>
+          <HolderWindow equipment={preview.eq} appearance={preview.appearance} info={info} />
         </div>
         <div className="flex flex-col gap-2 lg:mt-16">
           {EQUIPMENT_SLOTS.filter((s) => s.area === "right").map(slotInput)}
@@ -161,6 +187,21 @@ export function HolderEditor({
       <div className="grid grid-cols-1 justify-items-center gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {EQUIPMENT_SLOTS.filter((s) => s.area === "bottom").map(slotInput)}
       </div>
+
+      <label className="flex flex-col gap-1">
+        <span className="text-[11px] text-muted">
+          Chỉ số trong khung vàng — mỗi dòng một chỉ số, tối đa {MAX_STATS_LINES} dòng (5 dòng đầu: tên, hiếu chiến,
+          trình độ, lớp, trường tự điền)
+        </span>
+        <textarea
+          name="stats"
+          value={stats}
+          onChange={(e) => setStats(e.target.value)}
+          rows={8}
+          placeholder={STATS_PLACEHOLDER}
+          className={compact + " h-auto py-1.5 font-mono"}
+        />
+      </label>
     </ActionForm>
   );
 }

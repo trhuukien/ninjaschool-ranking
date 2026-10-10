@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 const LINKS = [
   { href: "/", label: "Bảng xếp hạng" },
   { href: "/matches", label: "Lịch sử trận" },
+  { href: "/random", label: "Chia phe" },
 ];
 
 /** `isAdmin` comes from the server layout; admin-only actions only show then. */
