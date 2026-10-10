@@ -15,7 +15,7 @@ interface MemberOption {
   character_name: string;
   owner: string | null;
   class: string | null;
-  level: string | null;
+  level: number | null;
   elo: number;
   games_played: number;
 }

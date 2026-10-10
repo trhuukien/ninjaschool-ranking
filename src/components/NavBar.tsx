@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ImportButton } from "@/components/ImportButton";
 
 const LINKS = [
   { href: "/", label: "Bảng xếp hạng" },
   { href: "/matches", label: "Lịch sử trận" },
 ];
 
-export function NavBar() {
+/** `isAdmin` comes from the server layout; admin-only actions only show then. */
+export function NavBar({ isAdmin }: { isAdmin: boolean }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -39,15 +39,22 @@ export function NavBar() {
           ))}
         </div>
 
-        <div className="ml-auto hidden items-center gap-2 sm:flex">
-          <ImportButton />
-          <Link
-            href="/matches/new"
-            className="rounded-md bg-accent px-3 py-1.5 text-sm font-semibold text-white shadow-sm shadow-accent/30 hover:bg-accent-strong"
-          >
-            Ghi trận đấu
-          </Link>
-        </div>
+        {isAdmin && (
+          <div className="ml-auto hidden items-center gap-2 sm:flex">
+            <Link
+              href="/admin"
+              className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground hover:bg-surface-raised"
+            >
+              Quản trị
+            </Link>
+            <Link
+              href="/matches/new"
+              className="rounded-md bg-accent px-3 py-1.5 text-sm font-semibold text-white shadow-sm shadow-accent/30 hover:bg-accent-strong"
+            >
+              Ghi trận đấu
+            </Link>
+          </div>
+        )}
 
         <button
           onClick={() => setOpen(true)}
@@ -97,16 +104,24 @@ export function NavBar() {
         </NavLink>
       ))}
 
-      <div className="mt-auto flex items-center gap-2 border-t border-border pt-4">
-        <ImportButton />
-        <Link
-          href="/matches/new"
-          onClick={() => setOpen(false)}
-          className="flex-1 rounded-md bg-accent px-3 py-1.5 text-center text-sm font-semibold text-white hover:bg-accent-strong"
-        >
-          Ghi trận đấu
-        </Link>
-      </div>
+      {isAdmin && (
+        <div className="mt-auto flex items-center gap-2 border-t border-border pt-4">
+          <Link
+            href="/admin"
+            onClick={() => setOpen(false)}
+            className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground hover:bg-surface-raised"
+          >
+            Quản trị
+          </Link>
+          <Link
+            href="/matches/new"
+            onClick={() => setOpen(false)}
+            className="flex-1 rounded-md bg-accent px-3 py-1.5 text-center text-sm font-semibold text-white hover:bg-accent-strong"
+          >
+            Ghi trận đấu
+          </Link>
+        </div>
+      )}
     </div>
     </>
   );

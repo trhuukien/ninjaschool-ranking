@@ -1,9 +1,11 @@
 import { listMembers } from "@/lib/members";
+import { requireAdmin } from "@/lib/auth/session";
 import { NewMatchForm } from "./NewMatchForm";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewMatchPage() {
+  await requireAdmin();
   const members = await listMembers();
   return (
     <div className="flex flex-col gap-6">

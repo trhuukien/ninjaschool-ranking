@@ -1,8 +1,20 @@
 import { notFound } from "next/navigation";
-import { getMemberByName, getMemberMatchHistory, parseIdList } from "@/lib/members";
+import {
+  getMemberByName,
+  getMemberGear,
+  getMemberMatchHistory,
+  parseIdList,
+  type Appearance,
+} from "@/lib/members";
+import { HOLDERS, HOLDER_LABEL, type Equipment } from "@/lib/equipment";
 import { cardClass } from "@/lib/ui";
 import { ClassBadge } from "@/components/ClassIcon";
 import { GameIcon, ResultIcon, RoleBadge, type Outcome } from "@/components/GameAssets";
+import { EquipmentPanel } from "@/components/EquipmentPanel";
+
+function hasAnything(equipment: Equipment, appearance: Appearance) {
+  return Object.keys(equipment).length > 0 || Object.values(appearance).some(Boolean);
+}
 
 export const dynamic = "force-dynamic";
 
@@ -15,9 +27,9 @@ export default async function MemberDetailPage({
   const member = await getMemberByName(decodeURIComponent(name));
   if (!member) notFound();
 
-  const history = await getMemberMatchHistory(member.id);
+  const [history, gear] = await Promise.all([getMemberMatchHistory(member.id), getMemberGear(member.id)]);
   const skillIds = parseIdList(member.skill_ids);
-  const itemIds = parseIdList(member.item_ids);
+  const panels = HOLDERS.filter((h) => hasAnything(gear.equipment[h], gear.appearance[h]));
 
   return (
     <div className="flex flex-col gap-6">
@@ -42,28 +54,27 @@ export default async function MemberDetailPage({
         </div>
       </div>
 
-      {(skillIds.length > 0 || itemIds.length > 0) && (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {skillIds.length > 0 && (
-            <div className={cardClass + " p-3"}>
-              <p className="mb-2 text-xs font-medium text-muted">Kỹ năng</p>
-              <div className="flex flex-wrap gap-2">
-                {skillIds.map((id) => (
-                  <GameIcon key={id} id={id} className="h-10 w-10 rounded-md border border-border" />
-                ))}
-              </div>
-            </div>
-          )}
-          {itemIds.length > 0 && (
-            <div className={cardClass + " p-3"}>
-              <p className="mb-2 text-xs font-medium text-muted">Trang bị</p>
-              <div className="flex flex-wrap gap-2">
-                {itemIds.map((id) => (
-                  <GameIcon key={id} id={id} className="h-10 w-10 rounded-md border border-border" />
-                ))}
-              </div>
-            </div>
-          )}
+      {skillIds.length > 0 && (
+        <div className={cardClass + " p-3"}>
+          <p className="mb-2 text-xs font-medium text-muted">Kỹ năng</p>
+          <div className="flex flex-wrap gap-2">
+            {skillIds.map((id) => (
+              <GameIcon key={id} id={id} className="h-10 w-10 rounded-md border border-border" />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {panels.length > 0 && (
+        <div className="grid grid-cols-1 items-start gap-6 sm:grid-cols-2">
+          {panels.map((holder) => (
+            <EquipmentPanel
+              key={holder}
+              equipment={gear.equipment[holder]}
+              appearance={gear.appearance[holder]}
+              title={holder === "main" ? "Trang bị" : HOLDER_LABEL.clone}
+            />
+          ))}
         </div>
       )}
 

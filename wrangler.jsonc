@@ -22,14 +22,13 @@
       "database_id": "2931ce10-b2dd-4ef9-939c-345793e09aa2"
     }
   ]
-  // GOOGLE_SERVICE_ACCOUNT_JSON is deliberately NOT declared here as a "var".
-  // wrangler.jsonc is git-controlled, and on a Git-connected Worker every
-  // deploy re-syncs "vars" from this file — so a placeholder value here would
-  // silently overwrite the real secret set in the dashboard on every push.
-  // Set it via the dashboard (Settings > Variables and Secrets > type
-  // "Secret", a plain string value — not "JSON" type, since the app does its
-  // own JSON.parse) or `wrangler secret put GOOGLE_SERVICE_ACCOUNT_JSON`; for
-  // local dev it comes from .dev.vars (gitignored). Its TS type lives in
-  // src/types/cloudflare-env.d.ts instead of the generated file, since it
-  // isn't a wrangler.jsonc binding.
+  // ADMIN_SETUP_TOKEN (needed once, by /admin/setup, to create the first
+  // admin) is deliberately NOT declared here as a "var". wrangler.jsonc is
+  // git-controlled, and on a Git-connected Worker every deploy re-syncs
+  // "vars" from this file — so a placeholder value here would silently
+  // overwrite the real secret on every push. Set it via the dashboard
+  // (Settings > Variables and Secrets > type "Secret") or
+  // `wrangler secret put ADMIN_SETUP_TOKEN`; for local dev it comes from
+  // .dev.vars (gitignored). Its TS type lives in src/types/cloudflare-env.d.ts
+  // instead of the generated file, since it isn't a wrangler.jsonc binding.
 }

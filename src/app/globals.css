@@ -64,6 +64,100 @@ button:disabled,
   cursor: not-allowed;
 }
 
+/*
+  Upgrade dots that run around an item slot's edge (EquipmentPanel). Each dot
+  gets a negative animation-delay so N dots sit evenly spaced on the loop.
+  Durations and timing come inline from EquipmentPanel.tsx (GAME_SPEED).
+*/
+@keyframes item-orbit {
+  0%,
+  100% {
+    left: 0;
+    top: 0;
+  }
+  25% {
+    left: 100%;
+    top: 0;
+  }
+  50% {
+    left: 100%;
+    top: 100%;
+  }
+  75% {
+    left: 0;
+    top: 100%;
+  }
+}
+
+.item-orbit-dot {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: currentColor;
+  transform: translate(-50%, -50%);
+  animation-name: item-orbit;
+  animation-iteration-count: infinite;
+}
+
+/*
+  The equipment panel's title arrows hop outward and back in two hard steps,
+  like the game's. Uses the `translate` property so it doesn't fight the
+  right arrow's mirroring `scale`.
+*/
+@keyframes title-arrow-left {
+  50% {
+    translate: -3px 0;
+  }
+}
+
+@keyframes title-arrow-right {
+  50% {
+    translate: 3px 0;
+  }
+}
+
+.title-arrow-left {
+  animation: title-arrow-left steps(1) infinite;
+}
+
+.title-arrow-right {
+  animation: title-arrow-right steps(1) infinite;
+}
+
+/*
+  Idle "breathing" of the standing character in the equipment panel: head and
+  body drop 2 sprite px (1px on screen at the panel's half scale) and back.
+*/
+@keyframes char-breathe {
+  50% {
+    translate: 0 2px;
+  }
+}
+
+.char-breathe {
+  animation: char-breathe steps(1) infinite;
+}
+
+/*
+  Sprite flipbook frame (e.g. the yoroi). Its keyframes (sprite-frame-<n>)
+  come from EquipmentPanel.tsx; each frame's animation-delay picks its 1/n
+  of the loop.
+*/
+.sprite-frame {
+  animation-timing-function: step-end;
+  animation-iteration-count: infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sprite-frame,
+  .char-breathe,
+  .item-orbit-dot,
+  .title-arrow-left,
+  .title-arrow-right {
+    animation-play-state: paused;
+  }
+}
+
 ::selection {
   background: var(--accent);
   color: white;

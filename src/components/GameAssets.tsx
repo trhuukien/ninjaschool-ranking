@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ROLE_LABEL } from "@/lib/roles";
 
 // Official in-game UI assets (public/icons/game/*.png), used with permission —
 // only these specific, named files. Do not add more wholesale.
@@ -135,14 +136,8 @@ export function GameIcon({
   );
 }
 
-const ROLE_LABEL: Record<number, string> = {
-  1216: "Tộc Trưởng",
-  1215: "Tộc Phó",
-  1217: "Trưởng Lão",
-  1121: "Thành viên",
-};
 
-/** Clan-role badge — the sheet's own "Icon" column now gives this id directly. */
+/** Clan-role badge; members.icon holds the badge's icon id (see lib/roles). */
 export function RoleBadge({
   iconId,
   className = "h-5 w-5",

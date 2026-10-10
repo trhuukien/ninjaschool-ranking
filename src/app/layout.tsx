@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Oswald } from "next/font/google";
 import { NavBar } from "@/components/NavBar";
 import { Footer } from "@/components/Footer";
+import { getCurrentAdmin } from "@/lib/auth/session";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -25,14 +26,17 @@ export const metadata: Metadata = {
   description: "Bảng xếp hạng Elo và lịch sử lôi đài của Ninjaschool",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // Only decides which nav buttons to show; every admin page and action
+  // checks the session itself.
+  const admin = await getCurrentAdmin();
   return (
     <html
       lang="vi"
       className={`${geistSans.variable} ${geistMono.variable} ${oswald.variable} h-full antialiased`}
     >
       <body className="flex min-h-screen flex-col overflow-x-hidden bg-background text-foreground">
-        <NavBar />
+        <NavBar isAdmin={admin !== null} />
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
           {children}
         </main>
